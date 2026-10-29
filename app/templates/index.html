@@ -1,0 +1,45 @@
+{% extends "base.html" %}{% from "_evidence.html" import field, proposal %}
+{% block body %}
+<h1>Проверка условий договоров поставки</h1>
+<div class="muted">Условия меняет только допсоглашение, подписанное обеими сторонами и вступившее в силу к дате проверки.
+Письма и проекты показаны отдельно и значения не меняют.</div>
+
+<h2>Загрузка документов</h2>
+<form action="/upload" method="post" enctype="multipart/form-data">
+ <input type="file" name="files" accept=".txt" multiple required>
+ Дата проверки: <input type="date" name="check_date" value="{{ check.isoformat() }}">
+ <button type="submit">Загрузить</button>
+</form>
+<form action="/" method="get" style="margin-top:6px">Пересчитать на дату:
+ <input type="date" name="check_date" value="{{ check.isoformat() }}"> <button>Применить</button></form>
+{% if store %}<form class="inline" action="/reset" method="post"><span class="muted">Загружено файлов: {{ store|length }}.</span>
+ <button>Очистить</button></form>{% endif %}
+
+<h2>Договоры на {{ fmt_date(check) }}</h2>
+{% if not a.cards %}<p class="muted">Загрузите TXT-файлы договоров и связанных документов.</p>{% else %}
+<table>
+<tr><th>№ договора</th><th>Поставщик</th><th>Сумма, ₽</th><th>Срок поставки</th><th>Несогласованные изменения</th></tr>
+{% for c in a.cards %}
+<tr>
+ <td><b>{{ c.contract_no }}</b><div class="muted">{{ a.docs[c.contract_doc_id].file_name }}</div>
+  {% for w in c.warnings %}<div class="b NEEDS_REVIEW">{{ w }}</div>{% endfor %}</td>
+ <td>{{ field(c.supplier, a) }}</td>
+ <td>{{ field(c.amount, a) }}</td>
+ <td>{{ field(c.term, a) }}</td>
+ <td>{% for p in c.proposals %}{{ proposal(p, a) }}{% else %}<span class="muted">нет</span>{% endfor %}</td>
+</tr>{% endfor %}
+</table>{% endif %}
+
+{% if store %}
+<h2>Загруженные документы</h2>
+<table><tr><th>Файл</th><th>Тип</th><th>Статус подписания</th><th>Договор</th><th>Дата вступления в силу</th></tr>
+{% for d in store.values() %}<tr><td><a href="/doc/{{ d.doc_id }}">{{ d.file_name }}</a>
+ {% if d.encoding_note %}<div class="b NEEDS_REVIEW">{{ d.encoding_note }}</div>{% endif %}</td>
+ <td>{{ TYPE_LABEL[d.doc_type] }}</td><td>{{ SIGNED_LABEL[d.signed] if d.doc_type.value != 'LETTER' else '—' }}</td>
+ <td>{{ d.contract_no or '—' }}</td><td>{{ fmt_date(d.effective_date) if d.effective_date else '—' }}</td></tr>{% endfor %}
+</table>
+{% if a.links.orphans or a.links.unknown %}<h2>Требуют проверки: не привязаны или не распознаны</h2><ul>
+{% for d, r in a.links.orphans %}<li>{{ d.file_name }} — {{ r }}</li>{% endfor %}
+{% for d in a.links.unknown %}<li>{{ d.file_name }} — тип документа не распознан</li>{% endfor %}</ul>{% endif %}
+{% endif %}
+{% endblock %}

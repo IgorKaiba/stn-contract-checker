@@ -1,0 +1,40 @@
+{% extends "base.html" %}{% from "_evidence.html" import field, proposal %}
+{% block body %}
+<h1>Вопросы закупщика</h1>
+<div class="muted">Дата проверки: {{ fmt_date(check) }}. Номера договоров берутся из загруженных файлов.</div>
+{% if not a.cards %}<p>Сначала загрузите документы на <a href="/">главной странице</a>.</p>{% else %}
+<h2>Быстрые вопросы</h2>
+<p>{% set first = a.cards[0].contract_no %}
+{% for c in a.cards %}
+ <a href="/ask?q=term&no={{ c.contract_no }}&on={{ check.isoformat() }}">Срок {{ c.contract_no }}</a> ·
+ <a href="/ask?q=amount&no={{ c.contract_no }}">Сумма {{ c.contract_no }}</a><br>
+{% endfor %}
+<a href="/ask?q=deadline&before={{ DEFAULT_DEADLINE }}">Поставка раньше {{ fmt_date(parse_d(DEFAULT_DEADLINE)) }} и несогласованные изменения срока</a></p>
+
+<h2>Свой вопрос</h2>
+<form action="/ask" method="get">
+ <select name="q"><option value="term" {{ 'selected' if q=='term' }}>Срок поставки</option>
+  <option value="amount" {{ 'selected' if q=='amount' }}>Сумма</option></select>
+ по договору <select name="no">{% for c in a.cards %}<option {{ 'selected' if no==c.contract_no }}>{{ c.contract_no }}</option>{% endfor %}</select>
+ на дату <input type="date" name="on" value="{{ on or check.isoformat() }}"> <button>Ответ</button>
+</form>
+<form action="/ask" method="get" style="margin-top:6px"><input type="hidden" name="q" value="deadline">
+ Договоры со сроком поставки раньше <input type="date" name="before" value="{{ before }}"> <button>Показать</button></form>
+
+{% if answer %}<h2>Ответ</h2>
+{% if answer[0] == 'field' %}{% set r = answer[1] %}
+ {% if not r.found %}<p>Договор {{ r.contract_no }} не загружен — нет данных.</p>{% else %}
+ <p><b>{{ LABELS[r.field.field] }} по договору {{ r.contract_no }} на {{ fmt_date(r.check_date) }}:</b></p>
+ {{ field(r.field, a) }}
+ {% if r.proposals %}<p><b>Несогласованные предложения:</b></p>{% for p in r.proposals %}{{ proposal(p, a) }}{% endfor %}
+ {% else %}<p class="muted">Несогласованных предложений по этому полю нет.</p>{% endif %}{% endif %}
+{% else %}{% set r = answer[1] %}
+ <p><b>Срок поставки раньше {{ fmt_date(r.before) }} (на {{ fmt_date(r.check_date) }}):</b>
+ {% if not r.rows %}таких договоров нет.{% endif %}</p>
+ {% for row in r.rows %}<div style="margin-bottom:12px"><b>{{ row.card.contract_no }}</b> — {{ field(row.card.term, a) }}
+  {% if row.pending_term %}<div><b>Есть несогласованное изменение срока:</b></div>{% for p in row.pending_term %}{{ proposal(p, a) }}{% endfor %}
+  {% else %}<div class="muted">Несогласованных изменений срока нет.</div>{% endif %}</div>{% endfor %}
+ {% if r.undetermined %}<p class="muted">Срок не определён (нет данных / требует проверки):
+  {% for c in r.undetermined %}{{ c.contract_no }} {% endfor %}</p>{% endif %}
+{% endif %}{% endif %}{% endif %}
+{% endblock %}

@@ -1,0 +1,7 @@
+{% extends "base.html" %}{% block body %}
+<h1>{{ doc.file_name }}</h1>
+<div class="muted">Тип: {{ TYPE_LABEL[doc.doc_type] }} · статус: {{ SIGNED_LABEL[doc.signed] }}
+{% if doc.effective_date %} · вступает в силу {{ fmt_date(doc.effective_date) }}{% endif %}
+{% if doc.contract_no %} · договор {{ doc.contract_no }}{% endif %}</div>
+{% for p, html in paras %}<div class="para" id="{{ p.pid }}"><span class="pid">{{ p.pid[2:] }}</span>{{ html }}</div>{% endfor %}
+{% endblock %}

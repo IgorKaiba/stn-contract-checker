@@ -1,0 +1,17 @@
+{% macro ev(e) -%}
+<div class="quote">«{{ e.quote }}»<br><span class="muted">{{ e.file_name }}, абзац {{ e.pid[2:] }} ·
+<a href="/doc/{{ e.doc_id }}?s={{ e.start }}&e={{ e.end }}#{{ e.pid }}">к абзацу</a></span></div>
+{%- endmacro %}
+{% macro field(fv, a) -%}
+<span class="val">{{ show(fv) }}</span><span class="b {{ fv.state.value }}">{{ STATE_LABEL[fv.state] }}</span>
+{% if fv.state == State.CHANGED %}<div class="muted">было {{ fmt_value(fv.field, fv.base_value) }} → стало {{ show(fv) }}
+ (изменено: {{ a.docs[fv.changed_by].file_name }})</div>{% endif %}
+{% if fv.reason %}<div class="muted">{{ fv.reason }}</div>{% endif %}
+{% for e in fv.evidence %}{{ ev(e) }}{% endfor %}
+{% if fv.state == State.CHANGED %}{% for e in fv.base_evidence %}<div class="muted">исходная редакция:</div>{{ ev(e) }}{% endfor %}{% endif %}
+{%- endmacro %}
+{% macro proposal(p, a) -%}
+<div><span class="b pending">{{ KIND_LABEL[p.kind] }}</span> {{ LABELS.get(p.field, p.field) }}: <b>{{ fmt_value(p.field, p.proposed_value) }}</b>
+<span class="muted">— не изменяет действующие условия</span>
+{% for e in p.evidence %}{{ ev(e) }}{% endfor %}</div>
+{%- endmacro %}
